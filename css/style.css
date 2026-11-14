@@ -1,0 +1,93 @@
+:root {
+    --bg: #f6f7fb;
+    --surface: #ffffff;
+    --text: #1f2430;
+    --muted: #5d6578;
+    --border: #e3e6ef;
+    --accent: #3b6fd8;
+    --accent-soft: #e8efff;
+    --warn: #8a5a00;
+    --shadow: 0 2px 6px rgba(0, 0, 0, .08);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #14161d;
+        --surface: #1e222d;
+        --text: #e8eaf1;
+        --muted: #a2a9bb;
+        --border: #313748;
+        --accent: #7ba3ff;
+        --accent-soft: #26324d;
+        --warn: #e6b45a;
+        --shadow: none;
+    }
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Hiragino Sans", "Noto Sans JP", Meiryo, sans-serif;
+    line-height: 1.6;
+}
+
+header, main, footer { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
+header { padding-top: 28px; padding-bottom: 8px; text-align: center; }
+h1 { font-size: 1.6rem; margin: 0 0 12px; }
+h2 { font-size: 1.2rem; margin: 0 0 12px; }
+section { margin: 28px 0; }
+
+.notes { display: inline-block; text-align: left; margin: 0; padding-left: 1.2em; font-size: .9rem; color: var(--muted); }
+
+.cards { display: grid; gap: 12px; }
+.cards-4 { grid-template-columns: repeat(4, 1fr); }
+.cards-3 { grid-template-columns: repeat(3, 1fr); }
+.card { background: var(--surface); border-radius: 10px; padding: 14px 8px; text-align: center; box-shadow: var(--shadow); border: 1px solid var(--border); }
+.card p { margin: 2px 0; }
+.num { font-size: 1.7rem; font-weight: bold; color: var(--accent); }
+
+.bar { height: 10px; background: var(--border); border-radius: 5px; margin-top: 14px; overflow: hidden; }
+.bar-fill { height: 100%; width: 0; background: var(--accent); transition: width .25s; }
+
+.sub { font-size: .85rem; color: var(--muted); margin: 10px 0 0; }
+
+.share-x { display: block; margin: 18px auto 0; padding: 11px 22px; background: #000; color: #fff; border: 0; border-radius: 8px; font-size: .95rem; font-weight: bold; cursor: pointer; }
+.share-x:hover { opacity: .75; }
+.share-x:focus-visible, .tour-actions button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.tour { margin-bottom: 30px; }
+.tour-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; border-bottom: 2px solid var(--accent); padding: 6px 0; margin-bottom: 12px; }
+.tour-title { font-size: 1.05rem; font-weight: bold; margin: 0; }
+.tour-actions { display: flex; gap: 6px; }
+.tour-actions button { font: inherit; font-size: .8rem; padding: 4px 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; cursor: pointer; }
+
+.live-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.live-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; box-shadow: var(--shadow); }
+.live-card.is-attended { border-color: var(--accent); background: var(--accent-soft); }
+.live-card h4 { margin: 0 0 4px; font-size: .95rem; }
+.live-meta { margin: 0; font-size: .8rem; color: var(--muted); }
+.live-meta.empty { color: var(--warn); }
+.live-check { display: flex; gap: 8px; align-items: center; margin-top: 10px; font-weight: bold; font-size: .9rem; cursor: pointer; }
+.live-check.disabled { cursor: not-allowed; color: var(--muted); font-weight: normal; }
+.live-check input { width: 18px; height: 18px; }
+
+.filter { width: 100%; font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); margin-bottom: 10px; }
+.song-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 8px 16px; box-shadow: var(--shadow); }
+.song-item { padding: 10px 2px; border-bottom: 1px solid var(--border); }
+.song-item:last-child { border-bottom: 0; }
+.song-in { display: block; font-size: .78rem; color: var(--muted); }
+
+footer { font-size: .8rem; color: var(--muted); padding-bottom: 32px; }
+
+@media (max-width: 800px) {
+    .live-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+    .cards-4 { grid-template-columns: repeat(2, 1fr); }
+    .cards-3 { grid-template-columns: repeat(3, 1fr); }
+    .live-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 1.35rem; }
+}
