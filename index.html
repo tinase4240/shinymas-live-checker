@@ -8,86 +8,99 @@
     <meta property="og:title" content="シャニマスライブ回収率チェッカー">
     <meta property="og:description" content="シャニマスのライブ参加状況と、ライブで聴いた曲の回収率をチェックしよう">
     <meta property="og:type" content="website">
+    <script>
+        try { if (localStorage.getItem("shinymasLiveCollection:theme") === "dark") document.documentElement.dataset.theme = "dark"; } catch { /* 既定のライトのまま */ }
+    </script>
     <link rel="stylesheet" href="css/style.css">
     <script src="js/script.js" defer></script>
 </head>
 <body>
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-pressed="false"></button>
     <header>
         <h1>シャニマスライブ回収率チェッカー</h1>
-        <ul class="notes">
-            <li>参加したライブにチェックを入れると、ライブで披露された曲の回収率と未回収曲がわかります</li>
-            <li>非公式のファンツールです。公式とは関係ありません</li>
-            <li>チェック状態はこのブラウザ内（localStorage）にだけ保存され、外部には送信されません</li>
-            <li>曲は同じ曲なら名義やバージョンに関わらず1曲として数えます</li>
-            <li>ユニットは曲の歌唱者から判定しています（複数ユニットにまたがる曲は「ユニット横断」、全員曲は「全体曲」）</li>
-            <li>セットリストはファン投稿データ由来です。誤りや抜けに気づいたらお知らせください</li>
-        </ul>
     </header>
 
-    <nav class="page-nav" aria-label="ページ内の移動">
-        <a href="#summary">回収状況</a>
-        <a href="#lives">ライブ一覧</a>
-        <a href="#uncollected">未回収<span class="nav-count" id="nav-uncollected"></span></a>
-        <a href="#collected">回収済み<span class="nav-count" id="nav-collected"></span></a>
+    <nav class="page-nav" role="tablist" aria-label="表示の切り替え">
+        <button type="button" role="tab" id="tab-summary" aria-controls="panel-summary" aria-selected="true" data-tab="summary">回収状況</button>
+        <button type="button" role="tab" id="tab-lives" aria-controls="panel-lives" aria-selected="false" tabindex="-1" data-tab="lives">ライブ一覧</button>
+        <button type="button" role="tab" id="tab-uncollected" aria-controls="panel-uncollected" aria-selected="false" tabindex="-1" data-tab="uncollected">未回収<span class="nav-count" id="nav-uncollected"></span></button>
+        <button type="button" role="tab" id="tab-collected" aria-controls="panel-collected" aria-selected="false" tabindex="-1" data-tab="collected">回収済み<span class="nav-count" id="nav-collected"></span></button>
     </nav>
 
     <main>
-        <section id="summary">
-            <h2>楽曲回収状況</h2>
-            <div class="cards cards-4">
-                <div class="card"><p class="num" id="total">0</p><p>全楽曲</p></div>
-                <div class="card"><p class="num" id="collected">0</p><p>回収済み</p></div>
-                <div class="card"><p class="num" id="uncollected">0</p><p>未回収</p></div>
-                <div class="card"><p class="num" id="rate">0%</p><p>回収率</p></div>
-            </div>
-            <div class="bar" role="progressbar" aria-label="回収率" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bar">
-                <div class="bar-fill" id="bar-fill"></div>
-            </div>
-            <h3 class="list-title">ユニット別の回収率</h3>
-            <div id="unit-bars" class="unit-bars"></div>
-        </section>
-
-        <section>
-            <h2>ライブ参加状況</h2>
-            <div class="cards cards-3">
-                <div class="card"><p class="num" id="live-total">0</p><p>開催済みライブ</p></div>
-                <div class="card"><p class="num" id="live-attended">0</p><p>参加</p></div>
-                <div class="card"><p class="num" id="live-not">0</p><p>未参加</p></div>
-            </div>
-            <p class="sub" id="data-status"></p>
-            <div class="share-buttons">
-                <button id="share-x" class="share-x" type="button">𝕏 回収率をXに投稿する</button>
-                <button id="share-image" class="share-image" type="button">回収率の画像を作る</button>
-            </div>
-            <div id="share-preview" class="share-preview" hidden>
-                <canvas id="share-canvas" aria-label="回収率のシェア画像"></canvas>
-                <div class="share-preview-actions">
-                    <a id="share-download" class="btn" download="shinymas-live-checker.png">画像を保存</a>
-                    <button id="share-native" class="btn" type="button" hidden>画像を共有</button>
-                </div>
-                <p class="sub">Xに投稿するときは、保存した画像を添付してください</p>
-            </div>
-        </section>
-
-        <section id="lives">
-            <h2>ライブ一覧</h2>
-            <div id="live-list"><p>読み込み中</p></div>
-        </section>
-
-        <section id="songs">
-            <h2>楽曲一覧</h2>
+        <div id="song-tools" class="song-tools" hidden>
             <input type="search" id="song-filter" class="filter" placeholder="曲名で絞り込み" aria-label="曲名で絞り込み">
+        </div>
 
-            <h3 class="list-title" id="uncollected">未回収楽曲（ユニット別）</h3>
-            <div id="uncollected-list" class="song-box"><p>読み込み中</p></div>
+        <div role="tabpanel" id="panel-summary" aria-labelledby="tab-summary">
+            <section>
+                <h2>楽曲回収状況</h2>
+                <div class="cards cards-4">
+                    <div class="card"><p class="num" id="total">0</p><p>全楽曲</p></div>
+                    <div class="card"><p class="num" id="collected">0</p><p>回収済み</p></div>
+                    <div class="card"><p class="num" id="uncollected">0</p><p>未回収</p></div>
+                    <div class="card"><p class="num" id="rate">0%</p><p>回収率</p></div>
+                </div>
+                <div class="bar" role="progressbar" aria-label="回収率" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="bar">
+                    <div class="bar-fill" id="bar-fill"></div>
+                </div>
+                <h3 class="list-title">ユニット別の回収率</h3>
+                <div id="unit-bars" class="unit-bars"></div>
+            </section>
 
-            <h3 class="list-title" id="collected">回収済み楽曲（聴いた回数順）</h3>
-            <p class="sub">参加済みにした公演のうち、その曲が披露された公演の数です</p>
-            <div id="collected-list" class="song-box"></div>
-        </section>
+            <section>
+                <h2>ライブ参加状況</h2>
+                <div class="cards cards-3">
+                    <div class="card"><p class="num" id="live-total">0</p><p>開催済みライブ</p></div>
+                    <div class="card"><p class="num" id="live-attended">0</p><p>参加</p></div>
+                    <div class="card"><p class="num" id="live-not">0</p><p>未参加</p></div>
+                </div>
+                <p class="sub" id="data-status"></p>
+                <div class="share-buttons">
+                    <button id="share-x" class="share-x" type="button">𝕏 回収率をXに投稿する</button>
+                    <button id="share-image" class="share-image" type="button">回収率の画像を作る</button>
+                </div>
+                <div id="share-preview" class="share-preview" hidden>
+                    <canvas id="share-canvas" aria-label="回収率のシェア画像"></canvas>
+                    <div class="share-preview-actions">
+                        <a id="share-download" class="btn" download="shinymas-live-checker.png">画像を保存</a>
+                        <button id="share-native" class="btn" type="button" hidden>画像を共有</button>
+                    </div>
+                    <p class="sub">Xに投稿するときは、保存した画像を添付してください</p>
+                </div>
+            </section>
+        </div>
+
+        <div role="tabpanel" id="panel-lives" aria-labelledby="tab-lives" hidden>
+            <section>
+                <h2>ライブ一覧</h2>
+                <div id="live-list"><p>読み込み中</p></div>
+            </section>
+        </div>
+
+        <div role="tabpanel" id="panel-uncollected" aria-labelledby="tab-uncollected" hidden>
+            <section>
+                <h2>未回収楽曲（ユニット別）</h2>
+                <div id="uncollected-list" class="song-box"><p>読み込み中</p></div>
+            </section>
+        </div>
+
+        <div role="tabpanel" id="panel-collected" aria-labelledby="tab-collected" hidden>
+            <section>
+                <h2>回収済み楽曲（聴いた回数順）</h2>
+                <p class="sub list-sub">参加済みにした公演のうち、その曲が披露された公演の数です</p>
+                <div id="collected-list" class="song-box"></div>
+            </section>
+        </div>
     </main>
 
     <footer>
+        <ul class="notes">
+            <li>参加したライブにチェックを入れると、ライブで披露された曲の回収率と未回収曲がわかります</li>
+            <li>非公式のファンツールです。公式とは関係ありません</li>
+            <li>曲は同じ曲なら名義やバージョンに関わらず1曲として数えます</li>
+            <li>セットリストはファン投稿データ由来です。誤りや抜けに気づいたらお知らせください</li>
+        </ul>
         <p>セットリスト出典: <a href="https://www.livefans.jp/" target="_blank" rel="noopener noreferrer">LiveFans</a>（ファン投稿）。ファミ通のライブレポートおよび <a href="https://shinycolors.wiki/" target="_blank" rel="noopener noreferrer">Shinycolors Wiki</a> と照合。曲名の表記統一にも同wikiを利用。ライブ名・日程: Wikipedia「アイドルマスター シャイニーカラーズ」</p>
     </footer>
 </body>

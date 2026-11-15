@@ -24,7 +24,7 @@ python3 tools/build_lives.py     # data/lives.json を再生成（標準ライ�
 - **`tools/build_lives.py`**: 公演の定義 `LIVES`（tour_id / live_id / 日付 / 取得元 / livefans event ID）と、曲名の正規化テーブル（`ALIASES` = livefans の誤字訂正、`SONG_OVERRIDES` = 日本語名の補完、`KNOWN_WIKI_ERRORS` = wiki側の誤りと判断した公演）を持つ。セットリストは全公演 livefans を基準とし、5thLIVE以前は shinycolors.wiki と突き合わせて差分を警告する。
 - **`tools/sources.py`**: 取得元ごとのパーサ（livefans / ファミ通 / shinycolors.wiki）と `norm_key`（NFKC・小文字・記号除去）。同じ曲は `norm_key` が同じなら同一曲として、wiki の `titlejp` に表記を統一する。バージョン違い・歌唱者違いも1曲として数える。
 - **`tools/units.py`**: ユニット/メンバー定義と、wiki の曲ページ冒頭の歌唱者の記述（`sources.wiki_sung_by`）からのユニット判定（単一ユニット / `all` 全体曲 / `cross` 横断 / `other`）。wiki から決まらない曲は `UNIT_OVERRIDES`（曲名 → ユニットID）で補う。
-- **`js/script.js`**: `fetch("./data/lives.json")` したデータから描画と集計をすべてクライアントで行う。チェック状態は localStorage（キー `shinymasLiveCollection:attended`、公演IDの配列）にのみ保存。`date > 今日` の公演は「開催前」として選択不可・集計対象外。セットリスト未登録（songs が空）の公演は全楽曲・回収率に含まれない。データから消えた公演IDは起動時に保存状態から除去される。未回収曲はユニット別、回収済み曲は「参加済み公演で聴いた回数」の降順で表示する。`songs.json` が読めなくても動き、全曲「その他」扱いになる。ユニット別集計は `unitStats()` に共通化（回収率バー・未回収の見出し・シェア画像が使う）。シェア画像は Canvas（`drawShareImage`）で生成し、ダークモードに左右されないよう配色を固定している。
+- **`js/script.js`**: `fetch("./data/lives.json")` したデータから描画と集計をすべてクライアントで行う。チェック状態は localStorage（キー `shinymasLiveCollection:attended`、公演IDの配列）にのみ保存。`date > 今日` の公演は「開催前」として選択不可・集計対象外。セットリスト未登録（songs が空）の公演は全楽曲・回収率に含まれない。データから消えた公演IDは起動時に保存状態から除去される。未回収曲はユニット別、回収済み曲は「参加済み公演で聴いた回数」の降順で表示する。`songs.json` が読めなくても動き、全曲「その他」扱いになる。画面は4つのタブ（`showTab`、選択は URL の `#` に保存）で、パネルごとに `hidden` を切り替える。テーマは `<html data-theme="dark">` で切り替え（既定ライト、localStorage に保存）。ユニット別集計は `unitStats()` に共通化（回収率バー・未回収の見出し・シェア画像が使う）。シェア画像は Canvas（`drawShareImage`）で生成し、ダークモードに左右されないよう配色を固定している。
 
 ## データ更新時の注意
 

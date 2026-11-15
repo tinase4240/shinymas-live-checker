@@ -1,6 +1,7 @@
 "use strict";
 
 const STORAGE_KEY = "shinymasLiveCollection:attended";
+const THEME_KEY = "shinymasLiveCollection:theme";
 
 const OTHER_UNIT = "other";
 
@@ -46,7 +47,63 @@ function unitIndex(song) {
     return i < 0 ? units.length - 1 : i;     // 未知のユニットは最後（「その他」）に回す
 }
 
+// タブ（回収状況 / ライブ一覧 / 未回収 / 回収済み）。選択中のタブは URL の # に残し、再読み込みしても維持する
+const TABS = ["summary", "lives", "uncollected", "collected"];
+
+function showTab(name, { updateHash = true, focus = false } = {}) {
+    if (!TABS.includes(name)) name = "summary";
+    for (const t of TABS) {
+        const tab = document.getElementById(`tab-${t}`);
+        const on = t === name;
+        tab.setAttribute("aria-selected", String(on));
+        tab.tabIndex = on ? 0 : -1;
+        document.getElementById(`panel-${t}`).hidden = !on;
+        if (on && focus) tab.focus();
+    }
+    // 曲名の絞り込みは曲リストのタブでだけ使う
+    document.getElementById("song-tools").hidden = name !== "uncollected" && name !== "collected";
+    if (updateHash) {
+        try { history.replaceState(null, "", `#${name}`); } catch { /* 履歴を書き換えられなくても切り替えは動く */ }
+        window.scrollTo(0, 0);
+    }
+}
+
+function setupTabs() {
+    for (const t of TABS) {
+        document.getElementById(`tab-${t}`).addEventListener("click", () => showTab(t));
+    }
+    // 矢印キー・Home/End でタブ間を移動（WAI-ARIA のタブの操作に合わせる）
+    document.querySelector(".page-nav").addEventListener("keydown", e => {
+        const cur = TABS.indexOf(e.target.dataset.tab);
+        if (cur < 0) return;
+        const to = { ArrowRight: (cur + 1) % TABS.length, ArrowLeft: (cur + TABS.length - 1) % TABS.length,
+                     Home: 0, End: TABS.length - 1 }[e.key];
+        if (to === undefined) return;
+        e.preventDefault();
+        showTab(TABS[to], { focus: true });
+    });
+    showTab(location.hash.slice(1), { updateHash: false });
+}
+
+// テーマ（既定はライト。選択はこのブラウザに保存）
+function applyTheme(theme) {
+    const dark = theme === "dark";
+    if (dark) document.documentElement.dataset.theme = "dark";
+    else delete document.documentElement.dataset.theme;
+    const btn = document.getElementById("theme-toggle");
+    btn.textContent = dark ? "☀ ライトモード" : "☾ ダークモード";
+    btn.setAttribute("aria-pressed", String(dark));
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
+    setupTabs();
+    applyTheme(load(THEME_KEY));
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+        const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+        applyTheme(next);
+        save(THEME_KEY, next);
+    });
+
     try {
         attended = new Set(JSON.parse(load(STORAGE_KEY) || "[]"));
     } catch {
