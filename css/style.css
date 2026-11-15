@@ -116,6 +116,8 @@ section { margin: 28px 0; }
 .song-main { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 .song-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .unit-badge { font-size: .72rem; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.tag-unperformed { font-size: .72rem; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+.link-btn { font: inherit; padding: 0; border: 0; background: none; color: var(--accent); text-decoration: underline; cursor: pointer; }
 .song-count { font-weight: bold; color: var(--accent); white-space: nowrap; min-width: 3em; text-align: right; }
 
 .list-title { font-size: 1.02rem; margin: 22px 0 8px; }
@@ -135,8 +137,8 @@ footer .notes { margin: 0 0 10px; padding-left: 1.2em; }
 }
 @media (max-width: 560px) {
     .page-nav { padding: 6px 4px; gap: 0; }
-    .page-nav button { padding: 6px 9px; font-size: .84rem; }
-    .nav-count { margin-left: 2px; }
+    .page-nav button { padding: 6px 6px; font-size: .78rem; }
+    .nav-count { margin-left: 1px; font-size: .7rem; }
     .unit-bars { grid-template-columns: 1fr; }
     .cards-4 { grid-template-columns: repeat(2, 1fr); }
     .cards-3 { grid-template-columns: repeat(3, 1fr); }

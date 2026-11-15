@@ -9,6 +9,7 @@ let tours = [];
 let attended = new Set();
 let units = [{ id: OTHER_UNIT, name: "その他" }];   // data/songs.json の units（読めなければ「その他」だけ）
 let songUnit = {};                                  // 曲名 → ユニットID
+let unperformed = [];                               // 収録公演でまだ披露されていない曲（回収率には含めない）
 
 // localStorage が使えない環境（プライベートモード等）でも動くようにする
 function load(key) {
@@ -48,7 +49,7 @@ function unitIndex(song) {
 }
 
 // タブ（回収状況 / ライブ一覧 / 未回収 / 回収済み）。選択中のタブは URL の # に残し、再読み込みしても維持する
-const TABS = ["summary", "lives", "uncollected", "collected"];
+const TABS = ["summary", "lives", "uncollected", "collected", "unperformed"];
 
 function showTab(name, { updateHash = true, focus = false } = {}) {
     if (!TABS.includes(name)) name = "summary";
@@ -61,7 +62,7 @@ function showTab(name, { updateHash = true, focus = false } = {}) {
         if (on && focus) tab.focus();
     }
     // 曲名の絞り込みは曲リストのタブでだけ使う
-    document.getElementById("song-tools").hidden = name !== "uncollected" && name !== "collected";
+    document.getElementById("song-tools").hidden = !["uncollected", "collected", "unperformed"].includes(name);
     if (updateHash) {
         try { history.replaceState(null, "", `#${name}`); } catch { /* 履歴を書き換えられなくても切り替えは動く */ }
         window.scrollTo(0, 0);
@@ -131,6 +132,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const data = await res.json();
         units = data.units;
         songUnit = data.songs;
+        unperformed = data.unperformed || [];
         if (!units.some(u => u.id === OTHER_UNIT)) units.push({ id: OTHER_UNIT, name: "その他" });
     } catch (err) {
         console.error(err);   // ユニット情報なしでも回収率の表示は続ける
@@ -271,6 +273,8 @@ function update() {
 
     setText("nav-uncollected", total - got);
     setText("nav-collected", got);
+    setText("nav-unperformed", unperformed.length);
+    renderUnperformedStatus();
     renderUnitBars(all, collected);
     renderSongLists();
 }
@@ -334,6 +338,22 @@ function renderSongLists() {
 
     renderUncollected(all, collected, where, matches, query);
     renderCollected(all, collected, heard, where, matches, query);
+    renderUnperformed(matches, query);
+}
+
+function unitGroup(name, statText) {
+    const group = document.createElement("div");
+    group.className = "unit-group";
+    const head = document.createElement("h4");
+    head.className = "unit-head";
+    const title = document.createElement("span");
+    title.textContent = name;
+    const stat = document.createElement("span");
+    stat.className = "unit-stat";
+    stat.textContent = statText;
+    head.append(title, stat);
+    group.appendChild(head);
+    return group;
 }
 
 // 未回収曲をユニット別に表示する
@@ -357,22 +377,58 @@ function renderUncollected(all, collected, where, matches, query) {
         const inUnit = songs.filter(s => unitIndex(s) === i);
         if (inUnit.length === 0) return;
 
-        const group = document.createElement("div");
-        group.className = "unit-group";
-        const head = document.createElement("h4");
-        head.className = "unit-head";
-        const title = document.createElement("span");
-        title.textContent = unit.name;
-        const stat = document.createElement("span");
-        stat.className = "unit-stat";
         const t = totals.get(unit.id);   // inUnit が空でなければ全曲数も1以上
-        stat.textContent = `未回収 ${inUnit.length}曲（回収済み ${t.got} / 全${t.all}曲）`;
-        head.append(title, stat);
-        group.appendChild(head);
+        const group = unitGroup(unit.name, `未回収 ${inUnit.length}曲（回収済み ${t.got} / 全${t.all}曲）`);
 
         for (const song of inUnit) group.appendChild(songItem(song, "披露", where.get(song) || []));
         box.appendChild(group);
     });
+}
+
+// まだ披露されていない曲をユニット別に表示する
+function renderUnperformed(matches, query) {
+    const box = document.getElementById("unperformed-list");
+    box.replaceChildren();
+    if (unperformed.length === 0) {
+        box.textContent = "未披露の曲はありません";
+        return;
+    }
+    const songs = unperformed.filter(matches);
+    if (songs.length === 0) {
+        box.textContent = "該当する曲がありません";
+        return;
+    }
+    units.forEach((unit, i) => {
+        const inUnit = songs.filter(s => unitIndex(s) === i);
+        if (inUnit.length === 0) return;
+        const group = unitGroup(unit.name, `${inUnit.length}曲`);
+        for (const song of inUnit) {
+            const item = document.createElement("div");
+            item.className = "song-item song-main";
+            const name = document.createElement("span");
+            name.className = "song-name";
+            name.textContent = song;
+            const tag = document.createElement("span");
+            tag.className = "tag-unperformed";
+            tag.textContent = "未披露";
+            item.append(name, tag);
+            group.appendChild(item);
+        }
+        box.appendChild(group);
+    });
+}
+
+// 回収状況タブの案内（未披露は回収率に含めないことを明示し、一覧へ誘導する）
+function renderUnperformedStatus() {
+    const p = document.getElementById("unperformed-status");
+    p.replaceChildren();
+    if (unperformed.length === 0) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "link-btn";
+    btn.textContent = "一覧を見る";
+    btn.addEventListener("click", () => showTab("unperformed"));
+    p.append(`このほか、まだライブで披露されていない曲が ${unperformed.length} 曲あります（回収率には含まれません）。`, btn);
 }
 
 // 回収済みの曲を、聴いた回数の多い順に表示する

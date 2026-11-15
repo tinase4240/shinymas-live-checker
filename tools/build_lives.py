@@ -16,6 +16,7 @@ import sys
 from pathlib import Path
 
 import units
+from catalog import CATALOG
 from sources import (livefans_songs, norm_key, wiki_blocks, wiki_song_dictionary, wiki_song_pages,
                      wiki_sung_by)
 
@@ -159,6 +160,7 @@ ALIASES = {
     "Destinied Rival": "Destined Rival",
     "Happy Fanny Lacky": "Happy Funny Lucky",
     "サマーサマーオーシャンパーリイバケーション": "サマーサマーオーシャンパーリィバケーション",
+    "GR＠TITUDE": "GR@TITUDE",   # 全曲リストでは＠が全角。公式表記は半角
 }
 ALIAS_BY_KEY = {}   # main() で norm_key 化して使う
 
@@ -171,6 +173,7 @@ KNOWN_WIKI_ERRORS = {
 # livefans は曲名の後ろに「 [出演者]」を付けることがある。バージョン違い（short ver. 等）は同じ曲として数える
 PERFORMER_SUFFIX = re.compile(r"\s*\[[^\[\]]*(?:\([^()]*\))?[^\[\]]*\]\s*$")
 VERSION_SUFFIX = [
+    re.compile(r"\s*-\s*\d+\s*colors\s*-\s*$", re.I),            # -28 colors- / -9 colors- / -10 colors-
     re.compile(r"\s*[-–]\s*[^-–]*Ver\.?\s*$", re.I),
     re.compile(r"\s*[（(][^（）()]*Ver\.?[^（）()]*[）)]\s*$", re.I),
 ]
@@ -183,7 +186,7 @@ def strip_version(title):
     return title.strip()
 
 
-def write_songs(all_songs, wiki_pages, by_page, problems):
+def write_songs(all_songs, unperformed, wiki_pages, by_page, problems):
     """data/songs.json（ユニット一覧と 曲名 → ユニットID）を書き出す。"""
     pages_of = {}   # norm_key(日本語曲名) → wiki ページ名
     for title in wiki_pages:
@@ -192,7 +195,7 @@ def write_songs(all_songs, wiki_pages, by_page, problems):
             pages_of.setdefault(norm_key(jp), []).append(title)
 
     mapping = {}
-    for song in sorted(all_songs):
+    for song in sorted(all_songs | set(unperformed)):
         if song in units.UNIT_OVERRIDES:
             mapping[song] = units.UNIT_OVERRIDES[song]
             continue
@@ -205,10 +208,11 @@ def write_songs(all_songs, wiki_pages, by_page, problems):
         mapping[song] = unit
 
     dest = Path(__file__).resolve().parent.parent / "data" / "songs.json"
-    data = {"units": units.unit_list(), "songs": mapping}
+    data = {"units": units.unit_list(), "songs": mapping, "unperformed": unperformed}
     dest.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     counts = {u["name"]: sum(1 for v in mapping.values() if v == u["id"]) for u in data["units"]}
     print(f"{dest}: " + " / ".join(f"{k} {v}" for k, v in counts.items()))
+    print(f"  うち未披露 {len(unperformed)}曲")
 
 
 def main():
@@ -260,13 +264,19 @@ def main():
     dest.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     all_songs = {s for t in out for l in t["lives"] for s in l["songs"]}
-    write_songs(all_songs, wiki_pages, by_page, problems)
+    # 全曲リスト（catalog.py）にあって、どの公演でも披露されていない曲 = 未披露
+    catalog = list(dict.fromkeys(canon(t) for t in CATALOG))
+    unperformed = [s for s in catalog if s not in all_songs]
+    write_songs(all_songs, unperformed, wiki_pages, by_page, problems)
     n_lives = sum(len(t["lives"]) for t in out)
     print(f"{dest}: {len(out)} ツアー / {n_lives} 公演 / ユニーク曲 {len(all_songs)}")
     unknown = sorted(s for s in all_songs if norm_key(s) not in by_key)
     print(f"wiki辞書にない曲名（要目視）: {len(unknown)}件")
     for s in unknown:
         print("   ", s)
+    print(f"全曲リスト {len(catalog)}曲 / 披露済み {len(catalog) - len(unperformed)}曲 / 未披露 {len(unperformed)}曲")
+    print("披露済みだが全曲リストにない曲:", sorted(all_songs - set(catalog)))
+    print("未披露:", unperformed)
     for p in no_song:
         print("曲が空:", p)
     for p in problems:

@@ -8,7 +8,8 @@
 - 開催済みの単独ライブ 25ツアー / 65公演 / ユニーク曲246曲（1stLIVE 2019-03 〜 Master ShowPiece 2026-09）
 - 未開催の公演、合同ライブ、ミュージカル、シャニマス大感謝祭は含めない
 - 昼夜2回公演の日（liminal、Uka,、XXXX Performance）は公演ごとに別エントリ
-- 同じ曲はバージョン違い（short ver.、ユニット別Ver.等）や歌唱者違いでも1曲として数える
+- 同じ曲はバージョン違い（short ver.、ユニット別Ver.、`-28 colors-` 等）や歌唱者違いでも1曲として数える
+- 公式音源の全曲リスト（`tools/catalog.py`、270曲）のうち、上のライブで一度も披露されていない29曲は「未披露」として別枠で表示する。全楽曲・回収率には含めない（大感謝祭・ミュージカル・技術チャレンジカップなど、収録外の公演でだけ披露された曲もここに入る）。YouTube投稿などの非公式音源は全曲リストに入れていない
 
 ## 構成
 
@@ -16,9 +17,10 @@
 |---|---|
 | `index.html` / `css/style.css` / `js/script.js` | 画面とロジック（ビルド不要） |
 | `data/lives.json` | ツアー → 公演 → 披露曲（日本語曲名） |
-| `data/songs.json` | ユニット一覧と 曲名 → ユニットID（`lives.json` と同時に生成） |
+| `data/songs.json` | ユニット一覧、曲名 → ユニットID、未披露曲の一覧（`lives.json` と同時に生成） |
 | `tools/build_lives.py` | 公演の定義（LIVES）と `data/lives.json` の生成 |
 | `tools/sources.py` | 取得元ごとのパーサ（livefans / ファミ通 / shinycolors.wiki） |
+| `tools/catalog.py` | 公式音源の全曲リスト。ここにあって未披露の曲が `songs.json` の `unperformed` になる |
 | `tools/units.py` | ユニット定義と、曲ページの歌唱者からのユニット判定（`UNIT_OVERRIDES` で手動補正） |
 
 ## ローカルで確認
@@ -35,6 +37,7 @@ python3 -m http.server 8000   # → http://localhost:8000/
 - 回収済み楽曲は、参加済みの公演で聴いた回数の多い順に表示
 - 回収状況にユニット別の回収率バー。ページ上部のタブで「回収状況 / ライブ一覧 / 未回収 / 回収済み」を切り替える（選択中のタブはURLの `#` に残る）。画面右上でライト/ダークを切り替えられ、既定はライト
 - 「回収率の画像を作る」でシェア用画像（全体とユニット別の回収率）をブラウザ内で生成し、保存できる（対応端末では共有も可）。Xへの投稿は文章のみなので、画像は保存して添付する
+- 「未披露」タブに、まだ披露されていない曲をユニット別に表示（回収状況タブの案内からも開ける）
 - ユニットは shinycolors.wiki の曲ページの歌唱者から判定。1ユニットに収まる曲（ソロ含む）はそのユニット、複数ユニットにまたがる曲は「ユニット横断」、全員曲は「全体曲」、判定できない曲は「その他」
 
 ## データの出典と検証
@@ -55,6 +58,7 @@ python3 -m http.server 8000   # → http://localhost:8000/
 
 新しい公演が開催されたら:
 
+0. 新曲が出たら `tools/catalog.py` の `CATALOG` に曲名を足す（披露済みになった曲は自動で未披露から外れる）
 1. `tools/build_lives.py` の `LIVES` に公演を追加する（livefans の event ID を指定。ID は https://www.livefans.jp/search/artist/122359 から探せる）
 2. `python3 tools/build_lives.py` を実行する（取得結果は `tools/.cache/` に保存。更新が必要なら削除してから再実行）
 3. 出力の「警告」「wiki辞書にない曲名」を確認し、誤字があれば `ALIASES`、日本語名の欠落は `SONG_OVERRIDES` に追加する。「ユニット判定不可」と出た曲は `tools/units.py` の `UNIT_OVERRIDES` に追加する

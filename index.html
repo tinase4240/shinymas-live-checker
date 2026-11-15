@@ -25,6 +25,7 @@
         <button type="button" role="tab" id="tab-lives" aria-controls="panel-lives" aria-selected="false" tabindex="-1" data-tab="lives">ライブ一覧</button>
         <button type="button" role="tab" id="tab-uncollected" aria-controls="panel-uncollected" aria-selected="false" tabindex="-1" data-tab="uncollected">未回収<span class="nav-count" id="nav-uncollected"></span></button>
         <button type="button" role="tab" id="tab-collected" aria-controls="panel-collected" aria-selected="false" tabindex="-1" data-tab="collected">回収済み<span class="nav-count" id="nav-collected"></span></button>
+        <button type="button" role="tab" id="tab-unperformed" aria-controls="panel-unperformed" aria-selected="false" tabindex="-1" data-tab="unperformed">未披露<span class="nav-count" id="nav-unperformed"></span></button>
     </nav>
 
     <main>
@@ -46,6 +47,7 @@
                 </div>
                 <h3 class="list-title">ユニット別の回収率</h3>
                 <div id="unit-bars" class="unit-bars"></div>
+                <p class="sub" id="unperformed-status"></p>
             </section>
 
             <section>
@@ -90,6 +92,14 @@
                 <h2>回収済み楽曲（聴いた回数順）</h2>
                 <p class="sub list-sub">参加済みにした公演のうち、その曲が披露された公演の数です</p>
                 <div id="collected-list" class="song-box"></div>
+            </section>
+        </div>
+
+        <div role="tabpanel" id="panel-unperformed" aria-labelledby="tab-unperformed" hidden>
+            <section>
+                <h2>未披露の曲（ユニット別）</h2>
+                <p class="sub list-sub">収録している単独ライブで、まだ一度も披露されていない曲です。回収率には含まれません。大感謝祭・ミュージカルなど、収録外の公演でだけ披露された曲も含みます</p>
+                <div id="unperformed-list" class="song-box"></div>
             </section>
         </div>
     </main>
