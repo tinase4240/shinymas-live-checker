@@ -1865,6 +1865,32 @@
     ]
   },
   {
+    "id": "t27",
+    "name": "THE IDOLM@STER SHINY COLORS シャニマス大感謝祭！〜283スポーツフェスティバル〜",
+    "lives": [
+      {
+        "id": "27-01",
+        "name": "DAY1（個人戦）",
+        "date": "2026-02-14",
+        "songs": [
+          "Lit up my sky",
+          "キズナシェアリング",
+          "永遠色アーチ",
+          "SWEET♡STEP"
+        ]
+      },
+      {
+        "id": "27-02",
+        "name": "DAY2（チーム戦）",
+        "date": "2026-02-15",
+        "songs": [
+          "SWEET♡STEP",
+          "感謝のコントレイル"
+        ]
+      }
+    ]
+  },
+  {
     "id": "t23",
     "name": "283 Production XXXX Performance XXX= S/N-GUL4R1TY",
     "lives": [
