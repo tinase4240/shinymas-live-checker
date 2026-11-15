@@ -1802,6 +1802,69 @@
     ]
   },
   {
+    "id": "t26",
+    "name": "283 Production MUSICAL Performance 騎士団のヴェール -Veil of Order-（アンティーカXR）",
+    "lives": [
+      {
+        "id": "26-01",
+        "name": "DAY1 夜公演",
+        "date": "2025-12-27",
+        "songs": [
+          "メモワール・アンタクト",
+          "とある英雄たちの物語",
+          "運命前夜",
+          "橙より未来",
+          "時限式狂騒ワンダーランド",
+          "銀翼のアレジアンス -blade of truth-",
+          "千夜アリア",
+          "月影のアンシェネ",
+          "浮動性イノセンス",
+          "愚者の独白",
+          "THE LAST PRIDE",
+          "銀翼のアヴニール -become the brave-"
+        ]
+      },
+      {
+        "id": "26-02",
+        "name": "DAY2 昼公演",
+        "date": "2025-12-28",
+        "songs": [
+          "時限式狂騒ワンダーランド",
+          "月影のアンシェネ",
+          "秋の終わり、僕の記憶",
+          "銀翼のアレジアンス -blade of truth-",
+          "橙より未来",
+          "abyss of conflict",
+          "運命前夜",
+          "とある英雄たちの物語",
+          "Black Reverie",
+          "千夜アリア",
+          "Killer×Mission",
+          "銀翼のアヴニール -become the brave-"
+        ]
+      },
+      {
+        "id": "26-03",
+        "name": "DAY2 夜公演",
+        "date": "2025-12-28",
+        "songs": [
+          "運命前夜",
+          "とある英雄たちの物語",
+          "月影のアンシェネ",
+          "橙より未来",
+          "時限式狂騒ワンダーランド",
+          "銀翼のアレジアンス -blade of truth-",
+          "千夜アリア",
+          "Once Upon a Secret",
+          "ブレイク・アウト・セレンディピティ",
+          "Migratory Echoes",
+          "銀翼のアヴニール -become the brave-",
+          "バベルシティ・グレイス"
+        ]
+      }
+    ]
+  },
+  {
     "id": "t23",
     "name": "283 Production XXXX Performance XXX= S/N-GUL4R1TY",
     "lives": [
