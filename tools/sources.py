@@ -46,8 +46,9 @@ def norm_key(title):
 
 # ---------------------------------------------------------------- famitsu
 NON_SONG = re.compile(
-    r"^(MC|オーバーチュア|overture|OP|ED|エンディング|オープニング|アンコール|EN\d*|ドラマ|朗読|幕間|メドレー|"
-    r"opening|ending|encore|talk|トーク|映像|VTR)",
+    # 英字の見出しは単語境界つき（"OPEN the new world" を OP で、"ENDLESS" を EN で落とさないため）
+    r"^(?:(?:MC|OP|ED|EN\d*|overture|opening|ending|encore|talk|VTR)\b"
+    r"|オーバーチュア|エンディング|オープニング|アンコール|ドラマ|朗読|幕間|メドレー|トーク|映像)",
     re.I,
 )
 
