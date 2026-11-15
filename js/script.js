@@ -28,6 +28,19 @@ const isUpcoming = live => live.date > today;       // ISO日付なので文字�
 const hasSongs = live => live.songs.length > 0;
 const allLives = () => tours.flatMap(t => t.lives);
 
+const unitOf = song => units[unitIndex(song)];
+
+// ユニットごとの 全曲数 / 回収済み曲数（曲のないユニットは含めない）
+function unitStats(all, collected) {
+    const stats = units.map(u => ({ unit: u, all: 0, got: 0 }));
+    for (const s of all) {
+        const st = stats[unitIndex(s)];
+        st.all++;
+        if (collected.has(s)) st.got++;
+    }
+    return stats.filter(st => st.all > 0);
+}
+
 function unitIndex(song) {
     const i = units.findIndex(u => u.id === songUnit[song]);
     return i < 0 ? units.length - 1 : i;     // 未知のユニットは最後（「その他」）に回す
@@ -42,6 +55,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     document.getElementById("song-filter").addEventListener("input", renderSongLists);
     document.getElementById("share-x").addEventListener("click", shareToX);
+    document.getElementById("share-image").addEventListener("click", makeShareImage);
 
     try {
         const res = await fetch("./data/lives.json");
@@ -198,6 +212,9 @@ function update() {
     document.getElementById("data-status").textContent =
         `セットリスト登録済み ${held.length - unregistered} 公演 / 未登録 ${unregistered} 公演（未登録分は全楽曲・回収率に含まれません）`;
 
+    setText("nav-uncollected", total - got);
+    setText("nav-collected", got);
+    renderUnitBars(all, collected);
     renderSongLists();
 }
 
@@ -238,7 +255,7 @@ function songItem(song, noteLabel, noteList, count) {
     if (count !== undefined) {
         const badge = document.createElement("span");
         badge.className = "unit-badge";
-        badge.textContent = (units.find(u => u.id === songUnit[song]) || units[units.length - 1]).name;
+        badge.textContent = unitOf(song).name;
         const times = document.createElement("span");
         times.className = "song-count";
         times.textContent = `${count}回`;
@@ -277,12 +294,7 @@ function renderUncollected(all, collected, where, matches, query) {
         return;
     }
 
-    const totals = new Map(units.map(u => [u.id, { all: 0, got: 0 }]));
-    for (const s of all) {
-        const t = totals.get(units[unitIndex(s)].id);
-        t.all++;
-        if (collected.has(s)) t.got++;
-    }
+    const totals = new Map(unitStats(all, collected).map(st => [st.unit.id, st]));
 
     units.forEach((unit, i) => {
         const inUnit = songs.filter(s => unitIndex(s) === i);
@@ -296,7 +308,7 @@ function renderUncollected(all, collected, where, matches, query) {
         title.textContent = unit.name;
         const stat = document.createElement("span");
         stat.className = "unit-stat";
-        const t = totals.get(unit.id);
+        const t = totals.get(unit.id);   // inUnit が空でなければ全曲数も1以上
         stat.textContent = `未回収 ${inUnit.length}曲（回収済み ${t.got} / 全${t.all}曲）`;
         head.append(title, stat);
         group.appendChild(head);
@@ -326,6 +338,155 @@ function renderCollected(all, collected, heard, where, matches, query) {
         const mine = (where.get(song) || []).filter(p => attended.has(p.live.id));
         box.appendChild(songItem(song, "聴いた公演", mine, heard.get(song)));
     }
+}
+
+function percent(got, total) {
+    return total === 0 ? 0 : Math.round((got / total) * 100);
+}
+
+// ユニット別の回収率バー
+function renderUnitBars(all, collected) {
+    const box = document.getElementById("unit-bars");
+    box.replaceChildren();
+    for (const { unit, all: total, got } of unitStats(all, collected)) {
+        const rate = percent(got, total);
+
+        const row = document.createElement("div");
+        row.className = "ubar";
+        const top = document.createElement("div");
+        top.className = "ubar-top";
+        const name = document.createElement("span");
+        name.textContent = unit.name;
+        const stat = document.createElement("span");
+        stat.className = "ubar-stat";
+        stat.textContent = `${got} / ${total}曲（${rate}%）`;
+        top.append(name, stat);
+
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        bar.setAttribute("role", "progressbar");
+        bar.setAttribute("aria-label", `${unit.name}の回収率`);
+        bar.setAttribute("aria-valuemin", "0");
+        bar.setAttribute("aria-valuemax", "100");
+        bar.setAttribute("aria-valuenow", String(rate));
+        const fill = document.createElement("div");
+        fill.className = "bar-fill";
+        fill.style.width = `${rate}%`;
+        bar.appendChild(fill);
+
+        row.append(top, bar);
+        box.appendChild(row);
+    }
+}
+
+// ---- シェア画像（Canvas）。ダークモードに左右されないよう配色は固定 ----
+const IMG = { w: 1200, h: 840, bg: "#f6f7fb", text: "#1f2430", muted: "#5d6578", track: "#e3e6ef", accent: "#3b6fd8" };
+const IMG_FONT = '"Hiragino Sans", "Noto Sans JP", Meiryo, sans-serif';
+
+function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h);
+}
+
+function drawBar(ctx, x, y, w, h, rate) {
+    ctx.fillStyle = IMG.track;
+    roundRect(ctx, x, y, w, h, h / 2);
+    ctx.fill();
+    if (rate > 0) {
+        ctx.fillStyle = IMG.accent;
+        roundRect(ctx, x, y, Math.max(h, w * rate / 100), h, h / 2);   // 0%に近くても丸が潰れないように
+        ctx.fill();
+    }
+}
+
+function drawShareImage(canvas) {
+    const { all, collected } = compute();
+    const rate = percent(collected.size, all.size);
+    const held = allLives().filter(l => !isUpcoming(l)).length;
+    const ctx = canvas.getContext("2d");
+    canvas.width = IMG.w;
+    canvas.height = IMG.h;
+
+    ctx.fillStyle = IMG.bg;
+    ctx.fillRect(0, 0, IMG.w, IMG.h);
+    ctx.textBaseline = "alphabetic";
+
+    ctx.fillStyle = IMG.text;
+    ctx.font = `bold 38px ${IMG_FONT}`;
+    ctx.textAlign = "left";
+    ctx.fillText("シャニマスライブ回収率チェッカー", 60, 80);
+
+    // 全体の回収率
+    ctx.fillStyle = IMG.accent;
+    ctx.font = `bold 150px ${IMG_FONT}`;
+    ctx.fillText(`${rate}%`, 60, 235);
+    ctx.fillStyle = IMG.muted;
+    ctx.font = `30px ${IMG_FONT}`;
+    ctx.fillText(`${collected.size} / ${all.size} 曲を回収`, 480, 190);
+    ctx.fillText(`参加 ${attended.size} / ${held} 公演`, 480, 235);
+    drawBar(ctx, 60, 265, IMG.w - 120, 22, rate);
+
+    // ユニット別（2列）
+    const stats = unitStats(all, collected);
+    const colW = 510, gap = 60, rowH = 74, top = 345;   // 60 + 510 + 60 + 510 + 60 = 1200
+    stats.forEach((st, i) => {
+        const x = 60 + (i % 2) * (colW + gap);
+        const y = top + Math.floor(i / 2) * rowH;
+        const pct = percent(st.got, st.all);
+
+        ctx.textAlign = "right";
+        ctx.fillStyle = IMG.muted;
+        ctx.font = `24px ${IMG_FONT}`;
+        const stat = `${st.got}/${st.all}  ${pct}%`;
+        ctx.fillText(stat, x + colW, y + 26);
+        const statW = ctx.measureText(stat).width;
+
+        ctx.textAlign = "left";
+        ctx.fillStyle = IMG.text;
+        let size = 26;
+        ctx.font = `bold ${size}px ${IMG_FONT}`;
+        const maxName = colW - statW - 16;
+        while (ctx.measureText(st.unit.name).width > maxName && size > 16) {
+            size -= 1;
+            ctx.font = `bold ${size}px ${IMG_FONT}`;
+        }
+        ctx.fillText(st.unit.name, x, y + 26);
+        drawBar(ctx, x, y + 38, colW, 14, pct);
+    });
+
+    ctx.textAlign = "right";
+    ctx.fillStyle = IMG.muted;
+    ctx.font = `22px ${IMG_FONT}`;
+    ctx.fillText(`${location.origin}${location.pathname}（非公式）`, IMG.w - 60, IMG.h - 24);
+}
+
+let shareImageUrl = null;
+
+function makeShareImage() {
+    const canvas = document.getElementById("share-canvas");
+    drawShareImage(canvas);
+
+    canvas.toBlob(blob => {
+        if (!blob) return;
+        if (shareImageUrl) URL.revokeObjectURL(shareImageUrl);
+        shareImageUrl = URL.createObjectURL(blob);
+        document.getElementById("share-download").href = shareImageUrl;
+
+        // Web Share API でファイル共有できる端末（主にスマホ）では共有ボタンも出す
+        const file = new File([blob], "shinymas-live-checker.png", { type: "image/png" });
+        const native = document.getElementById("share-native");
+        const canShare = !!(navigator.canShare && navigator.canShare({ files: [file] }));
+        native.hidden = !canShare;
+        native.onclick = canShare ? () => {
+            const rate = document.getElementById("rate").textContent;
+            navigator.share({ files: [file], text: `シャニマスのライブでの楽曲の回収率は${rate}でした\n#シャニマスライブ回収率チェッカー` })
+                .catch(() => { /* キャンセルは無視 */ });
+        } : null;
+
+        const preview = document.getElementById("share-preview");
+        preview.hidden = false;
+        preview.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }, "image/png");
 }
 
 function shareToX() {
