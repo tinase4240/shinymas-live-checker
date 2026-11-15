@@ -16,8 +16,10 @@
 |---|---|
 | `index.html` / `css/style.css` / `js/script.js` | 画面とロジック（ビルド不要） |
 | `data/lives.json` | ツアー → 公演 → 披露曲（日本語曲名） |
+| `data/songs.json` | ユニット一覧と 曲名 → ユニットID（`lives.json` と同時に生成） |
 | `tools/build_lives.py` | 公演の定義（LIVES）と `data/lives.json` の生成 |
 | `tools/sources.py` | 取得元ごとのパーサ（livefans / ファミ通 / shinycolors.wiki） |
+| `tools/units.py` | ユニット定義と、曲ページの歌唱者からのユニット判定（`UNIT_OVERRIDES` で手動補正） |
 
 ## ローカルで確認
 
@@ -27,13 +29,19 @@ python3 -m http.server 8000   # → http://localhost:8000/
 
 `file://` で直接開くと `fetch` が失敗するので、上のようにサーバー経由で開く。
 
+## 画面の見方
+
+- 未回収楽曲はユニット別に表示（ユニットごとの回収数つき）
+- 回収済み楽曲は、参加済みの公演で聴いた回数の多い順に表示
+- ユニットは shinycolors.wiki の曲ページの歌唱者から判定。1ユニットに収まる曲（ソロ含む）はそのユニット、複数ユニットにまたがる曲は「ユニット横断」、全員曲は「全体曲」、判定できない曲は「その他」
+
 ## データの出典と検証
 
 | 項目 | 出典 |
 |---|---|
 | ライブ名・日程 | Wikipedia「アイドルマスター シャイニーカラーズ」 |
 | セットリスト | LiveFans（ファン投稿）。全公演これを基準にする |
-| 曲名の表記統一・日本語化 | shinycolors.wiki の各曲ページ（`titlejp`） |
+| 曲名の表記統一・日本語化・ユニット判定 | shinycolors.wiki の各曲ページ（`titlejp` と冒頭の歌唱者の記述） |
 
 検証の状況:
 - ファミ通のライブレポートの曲目と livefans を比較できた公演（我儘なまま、5.5th、6th横浜、LIVE FUN、6.5th、Over the prism、∞th、Master ShowPiece など）は曲数が一致
@@ -47,9 +55,9 @@ python3 -m http.server 8000   # → http://localhost:8000/
 
 1. `tools/build_lives.py` の `LIVES` に公演を追加する（livefans の event ID を指定。ID は https://www.livefans.jp/search/artist/122359 から探せる）
 2. `python3 tools/build_lives.py` を実行する（取得結果は `tools/.cache/` に保存。更新が必要なら削除してから再実行）
-3. 出力の「警告」「wiki辞書にない曲名」を確認し、誤字があれば `ALIASES`、日本語名の欠落は `SONG_OVERRIDES` に追加する
+3. 出力の「警告」「wiki辞書にない曲名」を確認し、誤字があれば `ALIASES`、日本語名の欠落は `SONG_OVERRIDES` に追加する。「ユニット判定不可」と出た曲は `tools/units.py` の `UNIT_OVERRIDES` に追加する
 
-`data/lives.json` は再生成で上書きされるため、直接編集せず `build_lives.py` 側で直す。
+`data/lives.json` と `data/songs.json` は再生成で上書きされるため、直接編集せず `build_lives.py` 側で直す。
 
 ## 公開（GitHub Pages）
 

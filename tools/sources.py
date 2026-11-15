@@ -151,8 +151,8 @@ def wiki_titlejp(song_page):
     return m.group(1).strip() if m else None
 
 
-def wiki_song_dictionary():
-    """wiki の Category:Songs 全曲 → ({ページ名: 日本語曲名}, {norm_key: 日本語曲名})。"""
+def wiki_song_pages():
+    """wiki の Category:Songs 全曲 → {ページ名: wikitext}。"""
     def api(**q):
         q.update(format="json", formatversion=2)
         return json.loads(fetch(WIKI_API + "?" + urllib.parse.urlencode(q), delay=0.3))
@@ -163,15 +163,28 @@ def wiki_song_dictionary():
         if "continue" not in d:
             break
         cont = {"cmcontinue": d["continue"]["cmcontinue"]}
-    by_page = {}
+    pages = {}
     for i in range(0, len(titles), 40):
         chunk = titles[i:i + 40]
         d = api(action="query", prop="revisions", rvprop="content", rvslots="main", titles="|".join(chunk))
         for p in d["query"]["pages"]:
-            if "revisions" not in p:
-                continue
-            m = re.search(r"\|\s*titlejp\s*=\s*(.+)", p["revisions"][0]["slots"]["main"]["content"])
-            if m:
-                # titlejp={{PAGENAME}} は「日本語名＝ページ名」の意味
-                by_page[p["title"]] = m.group(1).strip().replace("{{PAGENAME}}", p["title"])
+            if "revisions" in p:
+                pages[p["title"]] = p["revisions"][0]["slots"]["main"]["content"]
+    return pages
+
+
+def wiki_song_dictionary(pages=None):
+    """wiki の Category:Songs 全曲 → ({ページ名: 日本語曲名}, {norm_key: 日本語曲名})。"""
+    by_page = {}
+    for title, content in (pages or wiki_song_pages()).items():
+        m = re.search(r"\|\s*titlejp\s*=\s*(.+)", content)
+        if m:
+            # titlejp={{PAGENAME}} は「日本語名＝ページ名」の意味
+            by_page[title] = m.group(1).strip().replace("{{PAGENAME}}", title)
     return by_page, {norm_key(v): v for v in by_page.values()}
+
+
+def wiki_sung_by(content):
+    """曲ページ冒頭の説明文（「''曲名'' is a song sung by …」）。"It is included" より前だけ返す。"""
+    m = re.search(r"^''[^\n]*", content, re.M)
+    return re.split(r"\bIt is included\b", m.group(0))[0] if m else ""

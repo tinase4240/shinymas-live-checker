@@ -2,8 +2,12 @@
 
 const STORAGE_KEY = "shinymasLiveCollection:attended";
 
+const OTHER_UNIT = "other";
+
 let tours = [];
 let attended = new Set();
+let units = [{ id: OTHER_UNIT, name: "その他" }];   // data/songs.json の units（読めなければ「その他」だけ）
+let songUnit = {};                                  // 曲名 → ユニットID
 
 // localStorage が使えない環境（プライベートモード等）でも動くようにする
 function load(key) {
@@ -24,6 +28,11 @@ const isUpcoming = live => live.date > today;       // ISO日付なので文字�
 const hasSongs = live => live.songs.length > 0;
 const allLives = () => tours.flatMap(t => t.lives);
 
+function unitIndex(song) {
+    const i = units.findIndex(u => u.id === songUnit[song]);
+    return i < 0 ? units.length - 1 : i;     // 未知のユニットは最後（「その他」）に回す
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
     try {
         attended = new Set(JSON.parse(load(STORAGE_KEY) || "[]"));
@@ -31,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         attended = new Set();
     }
 
-    document.getElementById("song-filter").addEventListener("input", renderUncollected);
+    document.getElementById("song-filter").addEventListener("input", renderSongLists);
     document.getElementById("share-x").addEventListener("click", shareToX);
 
     try {
@@ -43,6 +52,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("live-list").textContent = "ライブ情報を読み込めませんでした";
         document.getElementById("uncollected-list").textContent = "";
         return;
+    }
+
+    try {
+        const res = await fetch("./data/songs.json");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        units = data.units;
+        songUnit = data.songs;
+        if (!units.some(u => u.id === OTHER_UNIT)) units.push({ id: OTHER_UNIT, name: "その他" });
+    } catch (err) {
+        console.error(err);   // ユニット情報なしでも回収率の表示は続ける
     }
 
     // データ側から消えた公演IDや、未開催の公演が保存状態に残っていれば除く
@@ -142,14 +162,18 @@ function renderLives() {
 function compute() {
     const all = new Set();
     const collected = new Set();
+    const heard = new Map();     // 曲名 → 参加した公演で聴いた回数
     for (const live of allLives()) {
         if (isUpcoming(live)) continue;
         for (const song of live.songs) {
             all.add(song);
-            if (attended.has(live.id)) collected.add(song);
+            if (attended.has(live.id)) {
+                collected.add(song);
+                heard.set(song, (heard.get(song) || 0) + 1);
+            }
         }
     }
-    return { all, collected };
+    return { all, collected, heard };
 }
 
 function update() {
@@ -174,53 +198,133 @@ function update() {
     document.getElementById("data-status").textContent =
         `セットリスト登録済み ${held.length - unregistered} 公演 / 未登録 ${unregistered} 公演（未登録分は全楽曲・回収率に含まれません）`;
 
-    renderUncollected();
+    renderSongLists();
 }
 
 function setText(id, value) {
     document.getElementById(id).textContent = String(value);
 }
 
-function renderUncollected() {
-    const { all, collected } = compute();
-    const query = document.getElementById("song-filter").value.trim().toLowerCase();
-    const box = document.getElementById("uncollected-list");
-    box.replaceChildren();
-
-    // どの公演で披露されたか（未回収曲を聴けた公演の手がかり）
+// どの公演で披露されたか（曲 → 公演の配列）
+function performances() {
+    const tourOf = new Map(tours.flatMap(t => t.lives.map(l => [l.id, t.name])));
     const where = new Map();
     for (const live of allLives()) {
         if (isUpcoming(live)) continue;
         for (const song of live.songs) {
             if (!where.has(song)) where.set(song, []);
-            where.get(song).push(live);
+            where.get(song).push({ live, tour: tourOf.get(live.id) });
         }
     }
+    return where;
+}
 
-    const songs = [...all].filter(s => !collected.has(s) && s.toLowerCase().includes(query));
+function perfNote(list) {
+    const label = p => `${p.tour} ${p.live.name}`;
+    return list.slice(0, 3).map(label).join(" / ") +
+        (list.length > 3 ? ` ほか${list.length - 3}公演` : "");
+}
+
+function songItem(song, noteLabel, noteList, count) {
+    const item = document.createElement("div");
+    item.className = "song-item";
+
+    const main = document.createElement("div");
+    main.className = "song-main";
+    const name = document.createElement("span");
+    name.className = "song-name";
+    name.textContent = song;
+    main.appendChild(name);
+    if (count !== undefined) {
+        const badge = document.createElement("span");
+        badge.className = "unit-badge";
+        badge.textContent = (units.find(u => u.id === songUnit[song]) || units[units.length - 1]).name;
+        const times = document.createElement("span");
+        times.className = "song-count";
+        times.textContent = `${count}回`;
+        main.append(badge, times);
+    }
+
+    const note = document.createElement("span");
+    note.className = "song-in";
+    note.textContent = `${noteLabel}: ${perfNote(noteList)}`;
+    item.append(main, note);
+    return item;
+}
+
+function renderSongLists() {
+    const { all, collected, heard } = compute();
+    const query = document.getElementById("song-filter").value.trim().toLowerCase();
+    const where = performances();
+    const matches = s => s.toLowerCase().includes(query);
+
+    renderUncollected(all, collected, where, matches, query);
+    renderCollected(all, collected, heard, where, matches, query);
+}
+
+// 未回収曲をユニット別に表示する
+function renderUncollected(all, collected, where, matches, query) {
+    const box = document.getElementById("uncollected-list");
+    box.replaceChildren();
 
     if (all.size > 0 && collected.size === all.size) {
         box.textContent = "登録済みの全楽曲を回収済みです";
         return;
     }
+    const songs = [...all].filter(s => !collected.has(s) && matches(s));
     if (songs.length === 0) {
         box.textContent = query ? "該当する曲がありません" : "未回収の曲がありません";
         return;
     }
 
-    for (const song of songs) {
-        const item = document.createElement("div");
-        item.className = "song-item";
-        item.textContent = song;
+    const totals = new Map(units.map(u => [u.id, { all: 0, got: 0 }]));
+    for (const s of all) {
+        const t = totals.get(units[unitIndex(s)].id);
+        t.all++;
+        if (collected.has(s)) t.got++;
+    }
 
-        const lives = where.get(song) || [];
-        const tourOf = new Map(tours.flatMap(t => t.lives.map(l => [l.id, t.name])));
-        const note = document.createElement("span");
-        note.className = "song-in";
-        note.textContent = "披露: " + lives.map(l => `${tourOf.get(l.id)} ${l.name}`).slice(0, 3).join(" / ") +
-            (lives.length > 3 ? ` ほか${lives.length - 3}公演` : "");
-        item.appendChild(note);
-        box.appendChild(item);
+    units.forEach((unit, i) => {
+        const inUnit = songs.filter(s => unitIndex(s) === i);
+        if (inUnit.length === 0) return;
+
+        const group = document.createElement("div");
+        group.className = "unit-group";
+        const head = document.createElement("h4");
+        head.className = "unit-head";
+        const title = document.createElement("span");
+        title.textContent = unit.name;
+        const stat = document.createElement("span");
+        stat.className = "unit-stat";
+        const t = totals.get(unit.id);
+        stat.textContent = `未回収 ${inUnit.length}曲（回収済み ${t.got} / 全${t.all}曲）`;
+        head.append(title, stat);
+        group.appendChild(head);
+
+        for (const song of inUnit) group.appendChild(songItem(song, "披露", where.get(song) || []));
+        box.appendChild(group);
+    });
+}
+
+// 回収済みの曲を、聴いた回数の多い順に表示する
+function renderCollected(all, collected, heard, where, matches, query) {
+    const box = document.getElementById("collected-list");
+    box.replaceChildren();
+
+    if (collected.size === 0) {
+        box.textContent = all.size > 0 ? "参加したライブにチェックを入れると、聴いた曲がここに表示されます" : "";
+        return;
+    }
+    // 同じ回数なら ユニット順 → データ順（Array.sort は安定ソート）
+    const songs = [...collected].filter(matches)
+        .sort((a, b) => heard.get(b) - heard.get(a) || unitIndex(a) - unitIndex(b));
+    if (songs.length === 0) {
+        box.textContent = "該当する曲がありません";
+        return;
+    }
+    for (const song of songs) {
+        const mine = (where.get(song) || []).filter(p => attended.has(p.live.id));
+        box.appendChild(songItem(song, "聴いた公演", mine, heard.get(song)));
     }
 }
 

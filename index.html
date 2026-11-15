@@ -19,6 +19,7 @@
             <li>非公式のファンツールです。公式とは関係ありません</li>
             <li>チェック状態はこのブラウザ内（localStorage）にだけ保存され、外部には送信されません</li>
             <li>曲は同じ曲なら名義やバージョンに関わらず1曲として数えます</li>
+            <li>ユニットは曲の歌唱者から判定しています（複数ユニットにまたがる曲は「ユニット横断」、全員曲は「全体曲」）</li>
             <li>セットリストはファン投稿データ由来です。誤りや抜けに気づいたらお知らせください</li>
         </ul>
     </header>
@@ -54,9 +55,15 @@
         </section>
 
         <section>
-            <h2>未回収楽曲</h2>
+            <h2>楽曲一覧</h2>
             <input type="search" id="song-filter" class="filter" placeholder="曲名で絞り込み" aria-label="曲名で絞り込み">
+
+            <h3 class="list-title">未回収楽曲（ユニット別）</h3>
             <div id="uncollected-list" class="song-box"><p>読み込み中</p></div>
+
+            <h3 class="list-title">回収済み楽曲（聴いた回数順）</h3>
+            <p class="sub">参加済みにした公演のうち、その曲が披露された公演の数です</p>
+            <div id="collected-list" class="song-box"></div>
         </section>
     </main>
 

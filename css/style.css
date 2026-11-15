@@ -79,6 +79,16 @@ section { margin: 28px 0; }
 .song-item { padding: 10px 2px; border-bottom: 1px solid var(--border); }
 .song-item:last-child { border-bottom: 0; }
 .song-in { display: block; font-size: .78rem; color: var(--muted); }
+.song-main { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.song-name { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.unit-badge { font-size: .72rem; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.song-count { font-weight: bold; color: var(--accent); white-space: nowrap; min-width: 3em; text-align: right; }
+
+.list-title { font-size: 1.02rem; margin: 22px 0 8px; }
+.list-title + .sub { margin: 0 0 8px; }
+.unit-group + .unit-group { margin-top: 10px; }
+.unit-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 12px; margin: 6px -16px 0; padding: 6px 16px; font-size: .92rem; background: var(--accent-soft); }
+.unit-stat { font-weight: normal; font-size: .78rem; color: var(--muted); }
 
 footer { font-size: .8rem; color: var(--muted); padding-bottom: 32px; }
 

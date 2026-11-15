@@ -15,7 +15,9 @@ import re
 import sys
 from pathlib import Path
 
-from sources import (livefans_songs, norm_key, wiki_blocks, wiki_song_dictionary)
+import units
+from sources import (livefans_songs, norm_key, wiki_blocks, wiki_song_dictionary, wiki_song_pages,
+                     wiki_sung_by)
 
 P = "THE IDOLM@STER SHINY COLORS "
 W = "wiki"
@@ -181,8 +183,37 @@ def strip_version(title):
     return title.strip()
 
 
+def write_songs(all_songs, wiki_pages, by_page, problems):
+    """data/songs.json（ユニット一覧と 曲名 → ユニットID）を書き出す。"""
+    pages_of = {}   # norm_key(日本語曲名) → wiki ページ名
+    for title in wiki_pages:
+        jp = SONG_OVERRIDES.get(title) or by_page.get(title)
+        if jp:
+            pages_of.setdefault(norm_key(jp), []).append(title)
+
+    mapping = {}
+    for song in sorted(all_songs):
+        if song in units.UNIT_OVERRIDES:
+            mapping[song] = units.UNIT_OVERRIDES[song]
+            continue
+        # 別曲のページが同じ titlejp を持つことがあるので、ページ名が曲名と一致するものを優先する
+        cands = sorted(pages_of.get(norm_key(song), []), key=lambda t: norm_key(t) != norm_key(song))
+        unit = units.unit_of_sentence(wiki_sung_by(wiki_pages[cands[0]])) if cands else None
+        if unit is None:
+            problems.append(f"ユニット判定不可（units.UNIT_OVERRIDES に追加）: {song}")
+            unit = units.OTHER_ID
+        mapping[song] = unit
+
+    dest = Path(__file__).resolve().parent.parent / "data" / "songs.json"
+    data = {"units": units.unit_list(), "songs": mapping}
+    dest.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    counts = {u["name"]: sum(1 for v in mapping.values() if v == u["id"]) for u in data["units"]}
+    print(f"{dest}: " + " / ".join(f"{k} {v}" for k, v in counts.items()))
+
+
 def main():
-    by_page, by_key = wiki_song_dictionary()
+    wiki_pages = wiki_song_pages()
+    by_page, by_key = wiki_song_dictionary(wiki_pages)
     by_page_ci = {k[:1].upper() + k[1:]: v for k, v in by_page.items()}
     seen_display = {}          # norm_key → 表示名（辞書にない曲の初出表記）
     problems = []
@@ -229,6 +260,7 @@ def main():
     dest.write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     all_songs = {s for t in out for l in t["lives"] for s in l["songs"]}
+    write_songs(all_songs, wiki_pages, by_page, problems)
     n_lives = sum(len(t["lives"]) for t in out)
     print(f"{dest}: {len(out)} ツアー / {n_lives} 公演 / ユニーク曲 {len(all_songs)}")
     unknown = sorted(s for s in all_songs if norm_key(s) not in by_key)
